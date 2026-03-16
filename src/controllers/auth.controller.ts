@@ -11,7 +11,7 @@ export const register = async (request: FastifyRequest, reply: FastifyReply) => 
 
     const user = await db.select().from(users).where(eq(users.email, email));
 
-    if (user) {
+    if (user.length > 0) {
         return reply.status(400).send({ message: "User already exists" });
     }
 
@@ -33,7 +33,7 @@ export const login = async (request: FastifyRequest, reply: FastifyReply) => {
 
     const user = await db.select().from(users).where(eq(users.email, email));
 
-    if (!user) {
+    if (user.length === 0) {
         return reply.status(404).send({ message: "User not found" });
     }
 
@@ -63,7 +63,7 @@ export const login = async (request: FastifyRequest, reply: FastifyReply) => {
         maxAge: 60 * 60 * 24 * 7
     });
 
-    return reply.status(200).send({ message: "Login successful" });
+    return reply.status(200).send({ message: "Login successful", accessToken });
 }
 
 export const refresh = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -78,7 +78,7 @@ export const refresh = async (request: FastifyRequest, reply: FastifyReply) => {
 
         const user = await db.select().from(users).where(eq(users.id, decoded.id));
 
-        if (!user) {
+        if (user.length === 0) {
             return reply.status(404).send({ message: "User not found" });
         }
 
