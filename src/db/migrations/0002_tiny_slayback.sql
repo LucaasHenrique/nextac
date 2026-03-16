@@ -1,12 +1,12 @@
-CREATE TYPE "public"."question_status" AS ENUM('to_review', 'reviewing', 'reviewed', 'accepted', 'wrong_answer');--> statement-breakpoint
-CREATE TABLE "question_topics" (
+CREATE TYPE IF NOT EXISTS "question_status" AS ENUM('to_review', 'reviewing', 'reviewed', 'accepted', 'wrong_answer');--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "question_topics" (
 	"question_id" uuid NOT NULL,
 	"topic_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "question_topics_question_id_topic_id_pk" PRIMARY KEY("question_id","topic_id")
 );
 --> statement-breakpoint
-CREATE TABLE "questions" (
+CREATE TABLE IF NOT EXISTS "questions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"link" text NOT NULL,
@@ -25,6 +25,6 @@ CREATE TABLE "questions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "question_topics" ADD CONSTRAINT "question_topics_question_id_questions_id_fk" FOREIGN KEY ("question_id") REFERENCES "public"."questions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "question_topics" ADD CONSTRAINT "question_topics_topic_id_topics_id_fk" FOREIGN KEY ("topic_id") REFERENCES "public"."topics"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "questions" ADD CONSTRAINT "questions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE IF EXISTS "question_topics" ADD CONSTRAINT "question_topics_question_id_questions_id_fk" FOREIGN KEY ("question_id") REFERENCES "public"."questions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE IF EXISTS "question_topics" ADD CONSTRAINT "question_topics_topic_id_topics_id_fk" FOREIGN KEY ("topic_id") REFERENCES "public"."topics"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE IF EXISTS "questions" ADD CONSTRAINT "questions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;

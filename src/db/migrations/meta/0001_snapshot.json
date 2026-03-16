@@ -68,6 +68,7 @@
           "primaryKey": false,
           "notNull": true
         },
+        
         "created_at": {
           "name": "created_at",
           "type": "timestamp",

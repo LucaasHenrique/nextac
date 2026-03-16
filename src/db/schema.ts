@@ -10,6 +10,7 @@ import {
     integer,
     real,
 } from "drizzle-orm/pg-core";
+import { DESTRUCTION } from "node:dns";
 
 export const users = pgTable("users", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -65,6 +66,28 @@ export const userTopicRelations = relations(userTopics, ({ one }) => ({
     }),
 }));
 
+export const folder = pgTable("folder", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const folderRelations = relations(folder, ({ one }) => ({
+    user: one(users, {
+        fields: [folder.userId],
+        references: [users.id],
+    }),
+    parent: one(folder, {
+        fields: [folder.parentId],
+        references: [folder.id],
+    }),
+}));
+
 export const questionStatusEnum = pgEnum("question_status", [
     "to_review",
     "reviewing",
@@ -76,20 +99,24 @@ export const questionStatusEnum = pgEnum("question_status", [
 export const questions = pgTable("questions", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
+    description: text("description").notNull(),
     link: text("link").notNull(),
     status: questionStatusEnum("status").notNull().default("to_review"),
-    next_review: date("next_review"),
     difficulty_rating: text("difficulty_rating").notNull(),
+    next_review: date("next_review"),
     user_dificulty: text("user_difficulty"),
-    platform: text("platform").notNull(),
-    times_reviewed: integer("times_reviewed").default(0).notNull(),
+    platform: text("platform"),
+    times_reviewed: integer("times_reviewed").default(0),
     last_reviewed_at: timestamp("last_reviewed_at"),
-    interval_days: integer("interval_days").default(0).notNull(),
-    ease_factor: real("ease_factor").default(2.5).notNull(),
+    interval_days: integer("interval_days").default(0),
+    ease_factor: real("ease_factor").default(2.5),
     solved_at: timestamp("solved_at"),
     userId: uuid("user_id")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
+    folderId: uuid("folder_id").references(() => folder.id, {
+        onDelete: "cascade",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -98,9 +125,12 @@ export const notes = pgTable("notes", {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
     content: text("content").notNull(),
-    questionId: uuid("question_id")
-        .notNull()
-        .references(() => questions.id, { onDelete: "cascade" }),
+    questionId: uuid("question_id").references(() => questions.id, {
+        onDelete: "cascade",
+    }),
+    folderId: uuid("folder_id").references(() => folder.id, {
+        onDelete: "cascade",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -124,7 +154,10 @@ export const questionRelations = relations(questions, ({ one, many }) => ({
         fields: [questions.userId],
         references: [users.id],
     }),
-
+    folder: one(folder, {
+        fields: [questions.folderId],
+        references: [folder.id],
+    }),
     questionTopics: many(questionTopics),
     reviewSessionsQuestions: many(reviewSessionQuestions),
     notes: many(notes),
@@ -195,5 +228,9 @@ export const notesRelations = relations(notes, ({ one }) => ({
     question: one(questions, {
         fields: [notes.questionId],
         references: [questions.id],
+    }),
+    folder: one(folder, {
+        fields: [notes.folderId],
+        references: [folder.id],
     }),
 }));
