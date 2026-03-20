@@ -10,6 +10,11 @@ import fastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
 import fastifyJwt from "@fastify/jwt";
 import fastifyCookie from "@fastify/cookie";
+import { authRoutes } from "@/routes/auth.routes.js";
+import questionsRoutes from "@/routes/questions.route.js";
+import notesRoutes from "@/routes/notes.routes.js";
+import userRoutes from "@/routes/user.routes.js";
+import reviewSessionRoutes from "@/routes/review.session.routes.js";
 
 dotenv.config();
 const app = fastify().withTypeProvider<ZodTypeProvider>();
@@ -41,6 +46,13 @@ app.register(fastifySwagger, {
     },
     transform: jsonSchemaTransform,
 });
+
+/// ROUTES
+app.register(authRoutes, { prefix: "/api/auth" });
+app.register(questionsRoutes, { prefix: "/api/questions" });
+app.register(notesRoutes, { prefix: "/api/notes" });
+app.register(userRoutes, { prefix: "/api/users" });
+app.register(reviewSessionRoutes, { prefix: "/api/review-sessions" });
 
 app.get("/", () => {
     return "hello :)";
