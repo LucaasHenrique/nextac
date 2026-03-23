@@ -1,61 +1,20 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { db } from "@/db/index.js";
-import { reviewSessions, reviewSessionQuestions, questions } from "@/db/schema.js";
-import { eq, and, inArray } from "drizzle-orm";
+import type { AuthUser, IdParam, CreateReviewSessionBody, AddQuestionsToSessionBody, SessionQuestionParams } from "@/types/index.js";
+import { ServiceError } from "@/services/auth.service.js";
+import * as reviewSessionService from "@/services/review.session.service.js";
 
-export const createReviewSession = async (
-    request: FastifyRequest,
-    reply: FastifyReply
-) => {
+export const createReviewSession = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { id: userId } = request.user as { id: string };
-        const { name, plannedDuration, questionIds } = request.body as {
-            name: string;
-            plannedDuration: number;
-            questionIds: string[];
-        };
+        const { id: userId } = request.user as AuthUser;
+        const { name, plannedDuration, questionIds } = request.body as CreateReviewSessionBody;
 
-        if (questionIds && questionIds.length > 0) {
-            const existingQuestions = await db
-                .select({ id: questions.id })
-                .from(questions)
-                .where(
-                    and(
-                        inArray(questions.id, questionIds),
-                        eq(questions.userId, userId)
-                    )
-                );
+        const session = await reviewSessionService.createSession({ name, plannedDuration, questionIds, userId });
 
-            if (existingQuestions.length !== questionIds.length) {
-                return reply.status(400).send({
-                    message: "One or more questions not found or do not belong to the user",
-                });
-            }
-        }
-
-        const [session] = await db
-            .insert(reviewSessions)
-            .values({
-                name,
-                plannedDuration,
-                userId,
-            })
-            .returning();
-
-        if (questionIds && questionIds.length > 0) {
-            await db.insert(reviewSessionQuestions).values(
-                questionIds.map((questionId) => ({
-                    reviewSessionId: session.id,
-                    questionId,
-                }))
-            );
-        }
-
-        return reply.status(201).send({
-            ...session,
-            questionIds: questionIds || [],
-        });
+        return reply.status(201).send(session);
     } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
         return reply.status(500).send({
             message: "Internal server error",
             error: error instanceof Error ? error.message : String(error),
@@ -63,3 +22,116 @@ export const createReviewSession = async (
     }
 };
 
+export const listReviewSessionsByUser = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+
+        const sessions = await reviewSessionService.listSessionsByUser(userId);
+
+        return reply.status(200).send(sessions);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const getSessionById = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId } = request.params as IdParam;
+
+        const session = await reviewSessionService.getSessionById(sessionId, userId);
+
+        return reply.status(200).send(session);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const deleteSessionById = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId } = request.params as IdParam;
+
+        await reviewSessionService.deleteSession(sessionId, userId);
+
+        return reply.status(200).send({ message: "Review session deleted successfully" });
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const addQuestionToSession = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId } = request.params as IdParam;
+        const { questionIds } = request.body as AddQuestionsToSessionBody;
+
+        await reviewSessionService.addQuestionsToSession(sessionId, userId, questionIds);
+
+        return reply.status(200).send({ message: "Questions added to review session successfully" });
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const removeQuestionFromSession = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId, questionId } = request.params as SessionQuestionParams & { id: string };
+
+        await reviewSessionService.removeQuestionFromSession(sessionId, userId, questionId);
+
+        return reply.status(200).send({ message: "Question removed from review session successfully" });
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const listQuestionsFromSession = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId } = request.params as IdParam;
+
+        const questions = await reviewSessionService.listQuestionsFromSession(sessionId, userId);
+
+        return reply.status(200).send(questions);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};

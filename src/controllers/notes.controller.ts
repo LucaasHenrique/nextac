@@ -1,164 +1,135 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { db } from "@/db/index.js";
-import { notes, questions } from "@/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import type { AuthUser, IdParam, CreateNoteBody, UpdateNoteBody } from "@/types/index.js";
+import { ServiceError } from "@/services/auth.service.js";
+import * as notesService from "@/services/notes.service.js";
 
-export const createNote = async (
-    request: FastifyRequest,
-    reply: FastifyReply
-) => {
+export const createNote = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { id: questionId } = request.params as { id: string };
-        const { title, content } = request.body as {
-            title: string;
-            content: string;
-        };
+        const { id: userId } = request.user as AuthUser;
+        const body = request.body as CreateNoteBody;
 
-        const question = await db
-            .select()
-            .from(questions)
-            .where(eq(questions.id, questionId));
-
-        if (question.length === 0) {
-            return reply.status(404).send({ message: "Question not found" });
-        }
-
-        const note = await db
-            .insert(notes)
-            .values({
-                title,
-                content,
-                questionId,
-            })
-            .returning();
+        const note = await notesService.createNote(userId, body);
 
         return reply.status(201).send(note);
     } catch (error) {
-        console.error(error);
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
         return reply.status(500).send({
             message: "Internal server error",
             error: error instanceof Error ? error.message : String(error),
         });
     }
-}
+};
+
+export const createNoteForQuestion = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: questionId } = request.params as IdParam;
+        const { title, content } = request.body as CreateNoteBody;
+
+        const note = await notesService.createNote(userId, { title, content, questionId });
+
+        return reply.status(201).send(note);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
+export const getStandaloneNotes = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+
+        const standaloneNotes = await notesService.getStandaloneNotes(userId);
+
+        return reply.status(200).send(standaloneNotes);
+    } catch (error) {
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
 
 export const getNotesByQuestionId = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { id } = request.params as { id: string };
-        const { id: userId } = request.user as { id: string };
+        const { id } = request.params as IdParam;
+        const { id: userId } = request.user as AuthUser;
 
-        const question = await db
-            .select()
-            .from(questions)
-            .where(and(eq(questions.id, id), eq(questions.userId, userId)));
-
-        if (question.length === 0) {
-            return reply.status(404).send({ message: "Question not found" });
-        }
-
-        const questionNotes = await db.select().from(notes).where(eq(notes.questionId, id));
+        const questionNotes = await notesService.getNotesByQuestionId(id, userId);
 
         return reply.status(200).send(questionNotes);
     } catch (error) {
-        console.error(error);
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
         return reply.status(500).send({
             message: "Internal server error",
             error: error instanceof Error ? error.message : String(error),
         });
     }
-}
+};
 
 export const getNoteById = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { id } = request.params as { id: string };
-        const { id: userId } = request.user as { id: string };
+        const { id } = request.params as IdParam;
+        const { id: userId } = request.user as AuthUser;
 
-        const note = await db
-            .select()
-            .from(notes)
-            .innerJoin(questions, eq(notes.questionId, questions.id))
-            .where(and(eq(notes.id, id), eq(questions.userId, userId)));
+        const note = await notesService.getNoteById(id, userId);
 
-        if (note.length === 0) {
-            return reply.status(404).send({ message: "Note not found" });
-        }
-
-        return reply.status(200).send(note[0].notes);
+        return reply.status(200).send(note);
     } catch (error) {
-        console.error(error);
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
         return reply.status(500).send({
             message: "Internal server error",
             error: error instanceof Error ? error.message : String(error),
         });
     }
-}
+};
 
 export const updateNote = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { id } = request.params as { id: string };
-        const { id: userId } = request.user as { id: string };
+        const { id } = request.params as IdParam;
+        const { id: userId } = request.user as AuthUser;
+        const body = request.body as UpdateNoteBody;
 
-        const body = request.body as {
-            title?: string;
-            content?: string;
-        };
-
-        const existingNote = await db
-            .select()
-            .from(notes)
-            .innerJoin(questions, eq(notes.questionId, questions.id))
-            .where(and(eq(notes.id, id), eq(questions.userId, userId)));
-
-        if (existingNote.length === 0) {
-            return reply.status(404).send({ message: "Note not found" });
-        }
-
-        const updateData: Record<string, unknown> = {};
-
-        if (body.title !== undefined) updateData.title = body.title;
-        if (body.content !== undefined) updateData.content = body.content;
-
-        updateData.updatedAt = new Date();
-
-        const updated = await db
-            .update(notes)
-            .set(updateData)
-            .where(eq(notes.id, id))
-            .returning();
+        const updated = await notesService.updateNote(id, userId, body);
 
         return reply.status(200).send(updated);
     } catch (error) {
-        console.error(error);
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
         return reply.status(500).send({
             message: "Internal server error",
             error: error instanceof Error ? error.message : String(error),
         });
     }
-}
+};
 
 export const deleteNote = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-        const { id } = request.params as { id: string };
-        const { id: userId } = request.user as { id: string };
+        const { id } = request.params as IdParam;
+        const { id: userId } = request.user as AuthUser;
 
-        const existingNote = await db
-            .select()
-            .from(notes)
-            .innerJoin(questions, eq(notes.questionId, questions.id))
-            .where(and(eq(notes.id, id), eq(questions.userId, userId)));
-
-        if (existingNote.length === 0) {
-            return reply.status(404).send({ message: "Note not found" });
-        }
-
-        await db.delete(notes).where(eq(notes.id, id));
+        await notesService.deleteNote(id, userId);
 
         return reply.status(200).send({ message: "Note deleted successfully" });
     } catch (error) {
-        console.error(error);
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
         return reply.status(500).send({
             message: "Internal server error",
             error: error instanceof Error ? error.message : String(error),
         });
     }
-}
+};

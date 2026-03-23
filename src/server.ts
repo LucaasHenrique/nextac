@@ -15,6 +15,7 @@ import questionsRoutes from "@/routes/questions.route.js";
 import notesRoutes from "@/routes/notes.routes.js";
 import userRoutes from "@/routes/user.routes.js";
 import reviewSessionRoutes from "@/routes/review.session.routes.js";
+import topicsRoutes from "@/routes/topics.routes.js";
 
 dotenv.config();
 const app = fastify().withTypeProvider<ZodTypeProvider>();
@@ -53,6 +54,7 @@ app.register(questionsRoutes, { prefix: "/api/questions" });
 app.register(notesRoutes, { prefix: "/api/notes" });
 app.register(userRoutes, { prefix: "/api/users" });
 app.register(reviewSessionRoutes, { prefix: "/api/review-sessions" });
+app.register(topicsRoutes, { prefix: "/api/topics" });
 
 app.get("/", () => {
     return "hello :)";
