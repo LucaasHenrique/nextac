@@ -125,6 +125,9 @@ export const notes = pgTable("notes", {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
     content: text("content").notNull(),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
     questionId: uuid("question_id").references(() => questions.id, {
         onDelete: "cascade",
     }),
@@ -225,6 +228,10 @@ export const reviewSessionQuestionRelations = relations(
 );
 
 export const notesRelations = relations(notes, ({ one }) => ({
+    user: one(users, {
+        fields: [notes.userId],
+        references: [users.id],
+    }),
     question: one(questions, {
         fields: [notes.questionId],
         references: [questions.id],
