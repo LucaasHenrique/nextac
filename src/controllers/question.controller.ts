@@ -114,3 +114,24 @@ export const deleteQuestionTopic = async (request: FastifyRequest, reply: Fastif
         });
     }
 };
+
+export const addSpacedRepetitionQuestion = async (request: FastifyRequest, reply: FastifyReply) => {
+    try { 
+        const { id } = request.params as IdParam;
+        const { id: userId } = request.user as AuthUser;
+        const { grade } = request.body as { grade: number };
+
+        const updated_question = await questionService.addSpacedRepetition(grade, id, userId); 
+
+        return reply.status(200).send(updated_question);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+}
