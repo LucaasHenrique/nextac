@@ -3,6 +3,8 @@ import { questions, topics, questionTopics } from "@/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ServiceError } from "./auth.service.js";
 import type { CreateQuestionInput, UpdateQuestionBody } from "@/types/index.js";
+import { calculateSM2 } from "../utils/SM2Algorithm.js";
+import { warn } from "node:console";
 
 export const createQuestion = async ({ title, description, link, difficulty, userId }: CreateQuestionInput) => {
     const questionExists = await db.select().from(questions).where(eq(questions.link, link));
@@ -113,3 +115,54 @@ export const deleteQuestionTopic = async (questionId: string, topicId: string) =
 
     await db.delete(questionTopics).where(and(eq(questionTopics.questionId, questionId), eq(questionTopics.topicId, topicId)));
 };
+
+
+export const addSpacedRepetition = async (grade: number, questionId: string, userId: string) => {
+    if (grade < 0 || grade > 5) {
+        throw new ServiceError(400, "Grade must be between 0 and 5");
+    }
+
+    const question = await db
+        .select({
+            userId: questions.userId,
+            easeFactor: questions.ease_factor, 
+            interval_days: questions.interval_days, 
+            times_reviewed: questions.times_reviewed
+        })
+        .from(questions)
+        .where(eq(questions.id, questionId));
+    
+    if (question.length === 0) {
+        throw new ServiceError(404, "Question not found");
+    }
+
+    if (question[0].userId !== userId) {
+        throw new ServiceError(403, "You don't have permission to update this question");
+    }
+
+    const easeFactor = question[0].easeFactor ?? 2.5;
+    const interval_days = question[0].interval_days ?? 0;
+    const times_reviewed = question[0].times_reviewed ?? 0;
+
+    const result = calculateSM2(grade, easeFactor, interval_days, times_reviewed);
+
+    const updated = await db
+        .update(questions)
+        .set({
+            ease_factor: result.easeFactor,
+            interval_days: result.intervalDays,
+            times_reviewed: result.timesReviewed,
+            next_review: result.nextReview.toISOString().split("T")[0],
+            last_reviewed_at: new Date(),
+            updatedAt: new Date(),
+        })
+        .where(eq(questions.id, questionId))
+        .returning();
+
+    return {
+        question: updated[0],
+        nextReview: result.nextReview,
+        interval_days: result.intervalDays,
+    }
+}
+
