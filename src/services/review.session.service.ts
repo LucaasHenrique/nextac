@@ -3,6 +3,7 @@ import { reviewSessions, reviewSessionQuestions, questions } from "@/db/schema.j
 import { eq, and, inArray } from "drizzle-orm";
 import { ServiceError } from "./auth.service.js";
 import type { CreateSessionInput } from "@/types/index.js";
+import { ReviewSessionStatus } from "@/types/index.js";
 
 export const createSession = async ({ name, plannedDuration, questionIds, userId }: CreateSessionInput) => {
     if (questionIds && questionIds.length > 0) {
@@ -146,4 +147,47 @@ export const listQuestionsFromSession = async (sessionId: string, userId: string
         .where(eq(reviewSessionQuestions.reviewSessionId, sessionId));
 
     return sessionQuestions;
+};
+
+export const startReviewSession = async (sessionId: string, userId: string) => {
+    const session = await db
+        .select()
+        .from(reviewSessions)
+        .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
+
+    if (session.length === 0) {
+        throw new ServiceError(404, "Review session not found");
+    }
+
+    const startedAt = new Date();
+    const endedAt = new Date(startedAt.getTime() + session[0].plannedDuration * 60 * 1000);
+
+    const [updatedSession] = await db
+        .update(reviewSessions)
+        .set({ startedAt, endedAt, status: ReviewSessionStatus.IN_PROGRESS })
+        .where(eq(reviewSessions.id, sessionId))
+        .returning();
+
+    return updatedSession;
+};
+
+export const endReviewSession = async (sessionId: string, userId: string) => {
+    const session = await db
+        .select()
+        .from(reviewSessions)
+        .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
+
+    if (session.length === 0) {
+        throw new ServiceError(404, "Review session not found");
+    }
+
+    const endedAt = new Date();
+
+    const [updatedSession] = await db
+        .update(reviewSessions)
+        .set({ endedAt, status: ReviewSessionStatus.FINISHED })
+        .where(eq(reviewSessions.id, sessionId))
+        .returning();
+
+    return updatedSession;
 };
