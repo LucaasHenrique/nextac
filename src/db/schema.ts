@@ -10,7 +10,6 @@ import {
     integer,
     real,
 } from "drizzle-orm/pg-core";
-import { DESTRUCTION } from "node:dns";
 
 export const users = pgTable("users", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -184,7 +183,8 @@ export const reviewSessions = pgTable("review_sessions", {
     userId: uuid("user_id")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
-    startedAt: timestamp("started_at").defaultNow().notNull(),
+    status: text("status").notNull().default("pending"),
+    startedAt: timestamp("started_at"),
     endedAt: timestamp("ended_at"),
 });
 
