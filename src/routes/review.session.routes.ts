@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import {
     createReviewSession, listReviewSessionsByUser, getSessionById, addQuestionToSession,
     removeQuestionFromSession, listQuestionsFromSession,
-    deleteSessionById,
+    deleteSessionById, startReviewSession, endReviewSession
 } from "@/controllers/review.session.controller.js";
 import { authMiddleware } from "@/middleware/auth.js";
 
@@ -17,5 +17,7 @@ export default async function reviewSessionRoutes(app: FastifyInstance) {
         protectRoute.delete("/:id/questions/:questionId", removeQuestionFromSession);
         protectRoute.get("/:id/questions", listQuestionsFromSession);
         protectRoute.delete("/:id", deleteSessionById);
+        protectRoute.post("/:id/start", startReviewSession);
+        protectRoute.post("/:id/end", endReviewSession);
     });
 }
