@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import type { AuthUser, IdParam, CreateReviewSessionBody, AddQuestionsToSessionBody, SessionQuestionParams } from "@/types/index.js";
 import { ServiceError } from "@/services/auth.service.js";
 import * as reviewSessionService from "@/services/review.session.service.js";
+import { request } from "node:http";
 
 export const createReviewSession = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -135,3 +136,43 @@ export const listQuestionsFromSession = async (request: FastifyRequest, reply: F
         });
     }
 };
+
+export const startReviewSession = async (request: FastifyRequest, reply: FastifyReply) => {
+   try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId } = request.params as IdParam;
+        
+        const session = await reviewSessionService.startReviewSession(sessionId, userId);
+        
+        return reply.status(200).send(session);
+    
+   } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    } 
+}
+
+export const endReviewSession = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+        const { id: userId } = request.user as AuthUser;
+        const { id: sessionId } = request.params as IdParam;
+        
+        const session = await reviewSessionService.endReviewSession(sessionId, userId);
+
+        return reply.status(200).send(session);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return reply.status(error.statusCode).send({ message: error.message });
+        }
+        return reply.status(500).send({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+}
