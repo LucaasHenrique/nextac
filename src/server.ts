@@ -10,12 +10,19 @@ import fastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
 import fastifyJwt from "@fastify/jwt";
 import fastifyCookie from "@fastify/cookie";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { FastifyAdapter } from "@bull-board/fastify";
 import { authRoutes } from "@/routes/auth.routes.js";
 import questionsRoutes from "@/routes/questions.route.js";
 import notesRoutes from "@/routes/notes.routes.js";
 import userRoutes from "@/routes/user.routes.js";
 import reviewSessionRoutes from "@/routes/review.session.routes.js";
 import topicsRoutes from "@/routes/topics.routes.js";
+import { reviewSessionQueue } from "@/queues/review.session.queue.js";
+
+// Workers
+import "@/workers/review.session.worker.js";
 
 dotenv.config();
 const app = fastify().withTypeProvider<ZodTypeProvider>();
@@ -47,6 +54,17 @@ app.register(fastifySwagger, {
     },
     transform: jsonSchemaTransform,
 });
+
+// Bull Board
+const serverAdapter = new FastifyAdapter();
+serverAdapter.setBasePath("/admin/queues");
+
+createBullBoard({
+    queues: [new BullMQAdapter(reviewSessionQueue)],
+    serverAdapter,
+});
+
+app.register(serverAdapter.registerPlugin(), { prefix: "/admin/queues" });
 
 /// ROUTES
 app.register(authRoutes, { prefix: "/api/auth" });
