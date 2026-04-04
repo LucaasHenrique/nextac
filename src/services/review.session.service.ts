@@ -4,6 +4,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { ServiceError } from "./auth.service.js";
 import type { CreateSessionInput } from "@/types/index.js";
 import { ReviewSessionStatus } from "@/types/index.js";
+import { scheduleSessionEnd, cancelScheduledSessionEnd } from "@/queues/review.session.queue.js";
 
 export const createSession = async ({ name, plannedDuration, questionIds, userId }: CreateSessionInput) => {
     if (questionIds && questionIds.length > 0) {
@@ -41,7 +42,7 @@ export const createSession = async ({ name, plannedDuration, questionIds, userId
     }
 
     return {
-        ...session,
+      ...session,
         questionIds: questionIds || [],
     };
 };
@@ -168,6 +169,8 @@ export const startReviewSession = async (sessionId: string, userId: string) => {
         .where(eq(reviewSessions.id, sessionId))
         .returning();
 
+    await scheduleSessionEnd(sessionId, endedAt); 
+
     return updatedSession;
 };
 
@@ -180,6 +183,8 @@ export const endReviewSession = async (sessionId: string, userId: string) => {
     if (session.length === 0) {
         throw new ServiceError(404, "Review session not found");
     }
+
+    await cancelScheduledSessionEnd(sessionId);
 
     const endedAt = new Date();
 
