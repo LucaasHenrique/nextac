@@ -2,7 +2,6 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import type { AuthUser, IdParam, CreateReviewSessionBody, AddQuestionsToSessionBody, SessionQuestionParams } from "@/types/index.js";
 import { ServiceError } from "@/services/auth.service.js";
 import * as reviewSessionService from "@/services/review.session.service.js";
-import { request } from "node:http";
 
 export const createReviewSession = async (request: FastifyRequest, reply: FastifyReply) => {
     try {

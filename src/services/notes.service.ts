@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { notes, questions } from "@/db/schema.js";
 import { eq, and, isNull } from "drizzle-orm";
-import { ServiceError } from "./auth.service.js";
+import { NotFoundError } from "@/errors/http.errors.js";
 import type { CreateNoteBody, UpdateNoteBody } from "@/types/index.js";
 
 export const createNote = async (userId: string, data: CreateNoteBody) => {
@@ -12,7 +12,7 @@ export const createNote = async (userId: string, data: CreateNoteBody) => {
             .where(and(eq(questions.id, data.questionId), eq(questions.userId, userId)));
 
         if (question.length === 0) {
-            throw new ServiceError(404, "Question not found or doesn't belong to user");
+            throw new NotFoundError("Question not found or doesn't belong to user");
         }
     }
 
@@ -54,7 +54,7 @@ export const getNoteById = async (noteId: string, userId: string) => {
         .where(and(eq(notes.id, noteId), eq(notes.userId, userId)));
 
     if (note.length === 0) {
-        throw new ServiceError(404, "Note not found");
+        throw new NotFoundError("Note not found");
     }
 
     return note[0];
@@ -67,7 +67,7 @@ export const updateNote = async (noteId: string, userId: string, data: UpdateNot
         .where(and(eq(notes.id, noteId), eq(notes.userId, userId)));
 
     if (existingNote.length === 0) {
-        throw new ServiceError(404, "Note not found");
+        throw new NotFoundError("Note not found");
     }
 
     const updateData: Record<string, unknown> = {};
@@ -93,7 +93,7 @@ export const deleteNote = async (noteId: string, userId: string) => {
         .where(and(eq(notes.id, noteId), eq(notes.userId, userId)));
 
     if (existingNote.length === 0) {
-        throw new ServiceError(404, "Note not found");
+        throw new NotFoundError("Note not found");
     }
 
     await db.delete(notes).where(eq(notes.id, noteId));

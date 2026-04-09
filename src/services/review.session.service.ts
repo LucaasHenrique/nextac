@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { reviewSessions, reviewSessionQuestions, questions } from "@/db/schema.js";
 import { eq, and, inArray } from "drizzle-orm";
-import { ServiceError } from "./auth.service.js";
+import { NotFoundError, BadRequestError } from "@/errors/http.errors.js";
 import type { CreateSessionInput } from "@/types/index.js";
 import { ReviewSessionStatus } from "@/types/index.js";
 import { scheduleSessionEnd, cancelScheduledSessionEnd } from "@/queues/review.session.queue.js";
@@ -19,7 +19,7 @@ export const createSession = async ({ name, plannedDuration, questionIds, userId
             );
 
         if (existingQuestions.length !== questionIds.length) {
-            throw new ServiceError(400, "One or more questions not found or do not belong to the user");
+            throw new BadRequestError("One or more questions not found or do not belong to the user");
         }
     }
 
@@ -54,7 +54,7 @@ export const listSessionsByUser = async (userId: string) => {
         .where(eq(reviewSessions.userId, userId));
 
     if (sessions.length === 0) {
-        throw new ServiceError(404, "No review sessions found");
+        throw new NotFoundError("No review sessions found");
     }
 
     return sessions;
@@ -67,7 +67,7 @@ export const getSessionById = async (sessionId: string, userId: string) => {
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "No review sessions found");
+        throw new NotFoundError("No review sessions found");
     }
 
     return session;
@@ -80,7 +80,7 @@ export const deleteSession = async (sessionId: string, userId: string) => {
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "No review sessions found");
+        throw new NotFoundError("No review sessions found");
     }
 
     await db
@@ -95,7 +95,7 @@ export const addQuestionsToSession = async (sessionId: string, userId: string, q
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "No review sessions found");
+        throw new NotFoundError("No review sessions found");
     }
 
     if (questionIds && questionIds.length > 0) {
@@ -105,7 +105,7 @@ export const addQuestionsToSession = async (sessionId: string, userId: string, q
             .where(and(inArray(questions.id, questionIds), eq(questions.userId, userId)));
 
         if (existingQuestions.length !== questionIds.length) {
-            throw new ServiceError(400, "One or more questions not found or do not belong to the user");
+            throw new BadRequestError("One or more questions not found or do not belong to the user");
         }
 
         await db.insert(reviewSessionQuestions).values(
@@ -124,7 +124,7 @@ export const removeQuestionFromSession = async (sessionId: string, userId: strin
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "No review sessions found");
+        throw new NotFoundError("No review sessions found");
     }
 
     await db
@@ -139,7 +139,7 @@ export const listQuestionsFromSession = async (sessionId: string, userId: string
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "No review sessions found");
+        throw new NotFoundError("No review sessions found");
     }
 
     const sessionQuestions = await db
@@ -157,7 +157,7 @@ export const startReviewSession = async (sessionId: string, userId: string) => {
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "Review session not found");
+        throw new NotFoundError("Review session not found");
     }
 
     const startedAt = new Date();
@@ -181,7 +181,7 @@ export const endReviewSession = async (sessionId: string, userId: string) => {
         .where(and(eq(reviewSessions.id, sessionId), eq(reviewSessions.userId, userId)));
 
     if (session.length === 0) {
-        throw new ServiceError(404, "Review session not found");
+        throw new NotFoundError("Review session not found");
     }
 
     await cancelScheduledSessionEnd(sessionId);

@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { questions, topics, questionTopics } from "@/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { ServiceError } from "./auth.service.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/errors/http.errors.js";
 import type { CreateQuestionInput, UpdateQuestionBody } from "@/types/index.js";
 import { calculateSM2 } from "../utils/SM2Algorithm.js";
 import { warn } from "node:console";
@@ -10,7 +10,7 @@ export const createQuestion = async ({ title, description, link, difficulty, use
     const questionExists = await db.select().from(questions).where(eq(questions.link, link));
 
     if (questionExists.length > 0) {
-        throw new ServiceError(400, "Question already exists!!");
+        throw new ConflictError("Question already exists!!");
     }
 
     const question = await db
@@ -52,7 +52,7 @@ export const updateQuestion = async (id: string, userId: string, data: UpdateQue
         .where(and(eq(questions.id, id), eq(questions.userId, userId)));
 
     if (existing.length === 0) {
-        throw new ServiceError(404, "Question not found");
+        throw new NotFoundError("Question not found");
     }
 
     const updateData: Record<string, unknown> = {};
@@ -85,13 +85,13 @@ export const associateTopicToQuestion = async (questionId: string, topicId: stri
     const question = await db.select().from(questions).where(eq(questions.id, questionId));
 
     if (question.length === 0) {
-        throw new ServiceError(404, "Question not found");
+        throw new NotFoundError("Question not found");
     }
 
     const topic = await db.select().from(topics).where(eq(topics.id, topicId));
 
     if (topic.length === 0) {
-        throw new ServiceError(404, "Topic not found");
+        throw new NotFoundError("Topic not found");
     }
 
     await db.insert(questionTopics).values({
@@ -104,13 +104,13 @@ export const deleteQuestionTopic = async (questionId: string, topicId: string) =
     const question = await db.select().from(questions).where(eq(questions.id, questionId));
 
     if (question.length === 0) {
-        throw new ServiceError(404, "Question not found");
+        throw new NotFoundError("Question not found");
     }
 
     const topic = await db.select().from(topics).where(eq(topics.id, topicId));
 
     if (topic.length === 0) {
-        throw new ServiceError(404, "Topic not found");
+        throw new NotFoundError("Topic not found");
     }
 
     await db.delete(questionTopics).where(and(eq(questionTopics.questionId, questionId), eq(questionTopics.topicId, topicId)));
@@ -119,7 +119,7 @@ export const deleteQuestionTopic = async (questionId: string, topicId: string) =
 
 export const addSpacedRepetition = async (grade: number, questionId: string, userId: string) => {
     if (grade < 0 || grade > 5) {
-        throw new ServiceError(400, "Grade must be between 0 and 5");
+        throw new BadRequestError("Grade must be between 0 and 5");
     }
 
     const question = await db
@@ -133,11 +133,11 @@ export const addSpacedRepetition = async (grade: number, questionId: string, use
         .where(eq(questions.id, questionId));
     
     if (question.length === 0) {
-        throw new ServiceError(404, "Question not found");
+        throw new NotFoundError("Question not found");
     }
 
     if (question[0].userId !== userId) {
-        throw new ServiceError(403, "You don't have permission to update this question");
+        throw new ForbiddenError("You don't have permission to update this question");
     }
 
     const easeFactor = question[0].easeFactor ?? 2.5;
@@ -165,4 +165,3 @@ export const addSpacedRepetition = async (grade: number, questionId: string, use
         interval_days: result.intervalDays,
     }
 }
-

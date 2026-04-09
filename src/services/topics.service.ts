@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { topics, userTopics } from "@/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { ServiceError } from "./auth.service.js";
+import { BadRequestError, ConflictError, NotFoundError } from "@/errors/http.errors.js";
 
 export const getAllTopics = async () => {
     return await db.select().from(topics);
@@ -11,7 +11,7 @@ export const createTopic = async (name: string) => {
     const existing = await db.select().from(topics).where(eq(topics.name, name));
 
     if (existing.length > 0) {
-        throw new ServiceError(400, "Topic already exists");
+        throw new ConflictError("Topic already exists");
     }
 
     const [topic] = await db.insert(topics).values({ name }).returning();
@@ -25,7 +25,7 @@ export const getTopicById = async (id: string) => {
 
 export const addUserTopics = async (userId: string, topicIds: string[]) => {
     if (!topicIds || topicIds.length === 0) {
-        throw new ServiceError(400, "topicIds array is required");
+        throw new BadRequestError("topicIds array is required");
     }
 
     const validTopicIds: string[] = [];
@@ -37,7 +37,7 @@ export const addUserTopics = async (userId: string, topicIds: string[]) => {
     }
 
     if (validTopicIds.length === 0) {
-        throw new ServiceError(404, "No valid topics found");
+        throw new NotFoundError("No valid topics found");
     }
 
     const insertedTopics = [];
@@ -77,7 +77,7 @@ export const listUserTopics = async (userId: string) => {
         .where(eq(userTopics.userId, userId));
 
     if (userTopicsList.length === 0) {
-        throw new ServiceError(404, "Topics of interest not found");
+        throw new NotFoundError("Topics of interest not found");
     }
 
     return userTopicsList;
@@ -90,7 +90,7 @@ export const deleteUserTopic = async (userId: string, topicId: string) => {
         .where(and(eq(userTopics.userId, userId), eq(userTopics.topicId, topicId)));
 
     if (existing.length === 0) {
-        throw new ServiceError(404, "Topic not found for this user");
+        throw new NotFoundError("Topic not found for this user");
     }
 
     await db

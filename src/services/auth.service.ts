@@ -4,20 +4,15 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { RegisterBody, LoginResult, JwtPayload } from "@/types/index.js";
+import { ConflictError, NotFoundError, UnauthorizedError, ServiceError } from "@/errors/http.errors.js";
 
-export class ServiceError extends Error {
-    statusCode: number;
-    constructor(statusCode: number, message: string) {
-        super(message);
-        this.statusCode = statusCode;
-    }
-}
+export { ServiceError };
 
 export const registerUser = async ({ username, email, password, university, major }: RegisterBody) => {
     const existingUser = await db.select().from(users).where(eq(users.email, email));
 
     if (existingUser.length > 0) {
-        throw new ServiceError(400, "User already exists");
+        throw new ConflictError("User already exists");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,13 +30,13 @@ export const loginUser = async (email: string, password: string): Promise<LoginR
     const user = await db.select().from(users).where(eq(users.email, email));
 
     if (user.length === 0) {
-        throw new ServiceError(404, "User not found");
+        throw new NotFoundError("User not found");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user[0].password);
 
     if (!isPasswordValid) {
-        throw new ServiceError(401, "Invalid password");
+        throw new UnauthorizedError("Invalid password");
     }
 
     const payload = { id: user[0].id, email: user[0].email };
@@ -59,7 +54,7 @@ export const refreshAccessToken = async (refreshToken: string): Promise<string> 
         const user = await db.select().from(users).where(eq(users.id, decoded.id));
 
         if (user.length === 0) {
-            throw new ServiceError(404, "User not found");
+            throw new NotFoundError("User not found");
         }
 
         const payload = { id: user[0].id, email: user[0].email };
@@ -68,6 +63,6 @@ export const refreshAccessToken = async (refreshToken: string): Promise<string> 
         return accessToken;
     } catch (error) {
         if (error instanceof ServiceError) throw error;
-        throw new ServiceError(401, "Invalid refresh token");
+        throw new UnauthorizedError("Invalid refresh token");
     }
 };

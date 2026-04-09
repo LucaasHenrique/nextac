@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import { users } from "@/db/schema.js";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { ServiceError } from "./auth.service.js";
+import { NotFoundError } from "@/errors/http.errors.js";
 import type { UpdateUserBody } from "@/types/index.js";
 
 export const getUserById = async (id: string) => {
@@ -20,7 +20,7 @@ export const getUserById = async (id: string) => {
         .where(eq(users.id, id));
 
     if (user.length === 0) {
-        throw new ServiceError(404, "User not found");
+        throw new NotFoundError("User not found");
     }
 
     return user[0];
@@ -30,7 +30,7 @@ export const updateUser = async (id: string, data: UpdateUserBody) => {
     const existingUser = await db.select().from(users).where(eq(users.id, id));
 
     if (existingUser.length === 0) {
-        throw new ServiceError(404, "User not found");
+        throw new NotFoundError("User not found");
     }
 
     const updateData: Record<string, unknown> = {};
@@ -68,7 +68,7 @@ export const deleteUser = async (id: string) => {
     const existingUser = await db.select().from(users).where(eq(users.id, id));
 
     if (existingUser.length === 0) {
-        throw new ServiceError(404, "User not found");
+        throw new NotFoundError("User not found");
     }
 
     await db.delete(users).where(eq(users.id, id));
