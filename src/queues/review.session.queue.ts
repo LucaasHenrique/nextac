@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 import { redis } from "@/lib/redis.js";
+import { logger } from "@/lib/logger.js";
 
 export const reviewSessionQueue = new Queue("review-session", {
     connection: redis 
@@ -9,7 +10,7 @@ export const scheduleSessionEnd = async (sessionId: string, endedAt: Date) => {
     const delay = endedAt.getTime() - Date.now();
 
     if (delay <= 0) {
-        console.warn(`[Queue] Session ${sessionId} já expirou, não agendando job`);
+        logger.warn(`[Queue] Session ${sessionId} já expirou, não agendando job`);
         return;
     }
 

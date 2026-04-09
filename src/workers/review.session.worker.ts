@@ -4,7 +4,7 @@ import { db } from "@/db/index.js";
 import { reviewSessions } from "@/db/schema.js";
 import { eq } from "drizzle-orm";
 import { ReviewSessionStatus } from "@/types/review-session.types.js";
-
+import { logger } from "@/lib/logger.js";
 
 export const reviewSessionWorker = new Worker("review-session", 
     async (job) => {
@@ -14,19 +14,19 @@ export const reviewSessionWorker = new Worker("review-session",
             .set({ status: ReviewSessionStatus.FINISHED })
             .where(eq(reviewSessions.id, sessionId));
 
-        console.log(`[Worker] Session ${sessionId} finalizada automaticamente`);
+        logger.info(`[Worker] Session ${sessionId} finalizada automaticamente`);
     },
     { connection: redis }
 );
 
 reviewSessionWorker.on("completed", (job) => {
-    console.log(`[Worker] Job ${job.id} completado`);
+    logger.info(`[Worker] Job ${job.id} completado`);
 });
 
 reviewSessionWorker.on("failed", (job, err) => {
-    console.error(`[Worker] Job ${job?.id} falhou:`, err.message);
+    logger.error({ err }, `[Worker] Job ${job?.id} falhou`);
 });
 
 reviewSessionWorker.on("ready", () => {
-    console.log("[Worker] Review session worker pronto");
+    logger.info("[Worker] Review session worker pronto");
 });
