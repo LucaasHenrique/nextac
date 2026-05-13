@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { getQuestionsAuthUser, getQuestionById, deleteQuestion, createQuestion, associateTopicQuestion, deleteQuestionTopic, updateQuestion, addSpacedRepetitionQuestion } from "@/controllers/question.controller.js";
+import { getQuestionsAuthUser, getQuestionToReviewToday, getQuestionById, deleteQuestion, createQuestion, associateTopicQuestion, deleteQuestionTopic, updateQuestion, addSpacedRepetitionQuestion } from "@/controllers/question.controller.js";
 import { createNoteForQuestion, getNotesByQuestionId } from "@/controllers/notes.controller.js";
 import { authMiddleware } from "@/middleware/auth.js";
 
@@ -10,6 +10,7 @@ export default async function questionsRoutes(app: FastifyInstance) {
 
         protectRoute.post("/", createQuestion);
         protectRoute.get("/", getQuestionsAuthUser);
+        protectRoute.get("/to-review/today", getQuestionToReviewToday);
         protectRoute.get("/:id", getQuestionById);
         protectRoute.patch("/:id", updateQuestion);
         protectRoute.delete("/:id", deleteQuestion);
