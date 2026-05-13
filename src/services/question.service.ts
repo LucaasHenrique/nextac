@@ -1,10 +1,9 @@
 import { db } from "@/db/index.js";
 import { questions, topics, questionTopics } from "@/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull, lte, sql } from "drizzle-orm";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/errors/http.errors.js";
 import type { CreateQuestionInput, UpdateQuestionBody } from "@/types/index.js";
 import { calculateSM2 } from "../utils/SM2Algorithm.js";
-import { warn } from "node:console";
 
 export const createQuestion = async ({ title, description, link, difficulty, userId }: CreateQuestionInput) => {
     const questionExists = await db.select().from(questions).where(eq(questions.link, link));
@@ -36,13 +35,17 @@ export const getQuestionsByUserId = async (userId: string) => {
     return result;
 };
 
-export const getQuestionById = async (id: string) => {
+export const getQuestionById = async (id: string, userId: string) => {
     const question = await db
         .select()
         .from(questions)
-        .where(eq(questions.id, id));
+        .where(and(eq(questions.id, id), eq(questions.userId, userId)));
 
-    return question;
+    if (question.length === 0) {
+        throw new NotFoundError("Question not found");
+    }
+
+    return question[0];
 };
 
 export const updateQuestion = async (id: string, userId: string, data: UpdateQuestionBody) => {
@@ -56,7 +59,6 @@ export const updateQuestion = async (id: string, userId: string, data: UpdateQue
     }
 
     const updateData: Record<string, unknown> = {};
-
     if (data.title !== undefined) updateData.name = data.title;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.link !== undefined) updateData.link = data.link;
@@ -77,12 +79,24 @@ export const updateQuestion = async (id: string, userId: string, data: UpdateQue
     return updated;
 };
 
-export const deleteQuestion = async (id: string) => {
-    await db.delete(questions).where(eq(questions.id, id));
+export const deleteQuestion = async (id: string, userId: string) => {
+    const existing = await db
+        .select({ id: questions.id })
+        .from(questions)
+        .where(and(eq(questions.id, id), eq(questions.userId, userId)));
+
+    if (existing.length === 0) {
+        throw new NotFoundError("Question not found");
+    }
+
+    await db.delete(questions).where(and(eq(questions.id, id), eq(questions.userId, userId)));
 };
 
-export const associateTopicToQuestion = async (questionId: string, topicId: string) => {
-    const question = await db.select().from(questions).where(eq(questions.id, questionId));
+export const associateTopicToQuestion = async (questionId: string, topicId: string, userId: string) => {
+    const question = await db
+        .select()
+        .from(questions)
+        .where(and(eq(questions.id, questionId), eq(questions.userId, userId)));
 
     if (question.length === 0) {
         throw new NotFoundError("Question not found");
@@ -100,8 +114,11 @@ export const associateTopicToQuestion = async (questionId: string, topicId: stri
     });
 };
 
-export const deleteQuestionTopic = async (questionId: string, topicId: string) => {
-    const question = await db.select().from(questions).where(eq(questions.id, questionId));
+export const deleteQuestionTopic = async (questionId: string, topicId: string, userId: string) => {
+    const question = await db
+        .select()
+        .from(questions)
+        .where(and(eq(questions.id, questionId), eq(questions.userId, userId)));
 
     if (question.length === 0) {
         throw new NotFoundError("Question not found");
@@ -116,6 +133,18 @@ export const deleteQuestionTopic = async (questionId: string, topicId: string) =
     await db.delete(questionTopics).where(and(eq(questionTopics.questionId, questionId), eq(questionTopics.topicId, topicId)));
 };
 
+export const getQuestionToReviewToday = async (userId: string) => {
+    const questionsToReview = await db
+        .select()
+        .from(questions)
+        .where(and(
+            eq(questions.userId, userId),
+            isNotNull(questions.next_review),
+            lte(questions.next_review, sql`CURRENT_DATE`)
+        ));
+
+    return questionsToReview;
+};
 
 export const addSpacedRepetition = async (grade: number, questionId: string, userId: string) => {
     if (grade < 0 || grade > 5) {
@@ -163,5 +192,5 @@ export const addSpacedRepetition = async (grade: number, questionId: string, use
         question: updated[0],
         nextReview: result.nextReview,
         interval_days: result.intervalDays,
-    }
-}
+    };
+};
