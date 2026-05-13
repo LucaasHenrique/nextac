@@ -6,8 +6,6 @@ import jwt from "jsonwebtoken";
 import type { RegisterBody, LoginResult, JwtPayload } from "@/types/index.js";
 import { ConflictError, NotFoundError, UnauthorizedError, ServiceError } from "@/errors/http.errors.js";
 
-export { ServiceError };
-
 export const registerUser = async ({ username, email, password, university, major }: RegisterBody) => {
     const existingUser = await db.select().from(users).where(eq(users.email, email));
 
