@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, ilike } from "drizzle-orm";
 import { folder } from "@/db/schema.js";
 import { NotFoundError, BadRequestError, ConflictError } from "@/errors/http.errors.js";
 import type { CreateFolderBody, UpdateFolderBody } from "@/types/folder.types.js";
@@ -73,6 +73,19 @@ export const getFolderById = async (folderId: string, userId: string) => {
     }
 
     return selectedFolder[0];
+};
+
+export const searchFoldersByName = async (userId: string, name: string) => {
+    const normalizedName = name.trim();
+
+    if (!normalizedName) {
+        throw new BadRequestError("Name query is required");
+    }
+
+    return db
+        .select()
+        .from(folder)
+        .where(and(eq(folder.userId, userId), ilike(folder.name, `%${normalizedName}%`)));
 };
 
 export const updateFolder = async (folderId: string, userId: string, data: UpdateFolderBody) => {
@@ -161,6 +174,5 @@ export const deleteFolder = async (folderId: string, userId: string) => {
 
     await deleteFolderRecursively(folderId, userId);
 };
-
 
 
