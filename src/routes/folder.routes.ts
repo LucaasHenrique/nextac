@@ -3,6 +3,7 @@ import { authMiddleware } from "@/middleware/auth.js";
 import {
     createFolder,
     getFolders,
+    searchFoldersByName,
     getFolderById,
     updateFolder,
     deleteFolder,
@@ -14,6 +15,7 @@ export default async function folderRoutes(app: FastifyInstance) {
 
         protectRoute.post("/", createFolder);
         protectRoute.get("/", getFolders);
+        protectRoute.get("/search", searchFoldersByName);
         protectRoute.get("/:id", getFolderById);
         protectRoute.patch("/:id", updateFolder);
         protectRoute.delete("/:id", deleteFolder);
