@@ -20,7 +20,13 @@ export const createTopic = async (name: string) => {
 };
 
 export const getTopicById = async (id: string) => {
-    return await db.select().from(topics).where(eq(topics.id, id));
+    const topic = await db.select().from(topics).where(eq(topics.id, id));
+
+    if (topic.length === 0) {
+        throw new NotFoundError("Topic not found");
+    }
+
+    return topic[0];
 };
 
 export const addUserTopics = async (userId: string, topicIds: string[]) => {
