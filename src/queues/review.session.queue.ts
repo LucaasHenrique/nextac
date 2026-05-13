@@ -3,7 +3,7 @@ import { redis } from "@/lib/redis.js";
 import { logger } from "@/lib/logger.js";
 
 export const reviewSessionQueue = new Queue("review-session", {
-    connection: redis 
+    connection: redis
 });
 
 export const scheduleSessionEnd = async (sessionId: string, endedAt: Date) => {
