@@ -71,6 +71,13 @@
       "when": 1774747181589,
       "tag": "0011_motionless_obadiah_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778506262558,
+      "tag": "0012_remove_sm2_user_topics",
+      "breakpoints": true
     }
   ]
 }

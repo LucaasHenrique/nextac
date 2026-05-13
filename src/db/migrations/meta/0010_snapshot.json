@@ -1,6 +1,6 @@
 {
-  "id": "dca689c3-1fe8-4015-bee5-9ad2e511ff9a",
-  "prevId": "b6e731bd-642b-42fa-b7a4-8b741a66db91",
+  "id": "7508e8f1-cf0f-4346-89a1-0c5ed5cbfbb6",
+  "prevId": "dbdc04ba-d300-4a80-a9db-e6e42d57155d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -493,12 +493,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
         "started_at": {
           "name": "started_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": false
         },
         "ended_at": {
           "name": "ended_at",
