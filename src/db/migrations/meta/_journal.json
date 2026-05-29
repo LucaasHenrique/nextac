@@ -78,6 +78,13 @@
       "when": 1778506262558,
       "tag": "0012_remove_sm2_user_topics",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780054855949,
+      "tag": "0011_parallel_corsair",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,9 @@
-import {describe, it, expect, vi, beforeEach} from 'vitest'
+import {describe, it, expect, vi, beforeEach, expectTypeOf} from 'vitest'
 import { createMockDb } from '../../mocks/db.mocks.js'
-import { loginUser, registerUser } from '../../../src/services/auth.service.js';
+import { loginUser, refreshAccessToken, registerUser } from '../../../src/services/auth.service.js';
 import { ConflictError, NotFoundError, UnauthorizedError } from '../../../src/errors/http.errors.js';
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken';
 
 const mockDb = createMockDb();
 
@@ -38,6 +39,26 @@ describe("Auth Service", () => {
         
             await expect(registerUser({username: 'test',email: 'test@test.com', password: '123', university: 'test', major: 'Software Engineer'}))
             .rejects.toThrow(ConflictError);
+        })
+
+        it('deve salvar university e major', async () => {
+            mockDb.where.mockResolvedValue([]);
+            mockDb.values.mockResolvedValueOnce([{id: 1}]);
+
+            await registerUser({
+                username: 'test',
+                email: 'test@test.com',
+                password: '123456',
+                university: 'UFMG',
+                major: 'CS',
+            })
+
+            expect(mockDb.values).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    university: 'UFMG',
+                    major: 'CS',
+                })
+            );
         })
     })
     
@@ -75,9 +96,34 @@ describe("Auth Service", () => {
                 .rejects.toThrow(UnauthorizedError)
         })
     })
-    
 
-    
+    describe('refreshAccessToken', async () => {
+        it('deve retornar um novo accessToken', async () => {
+            mockDb.where.mockResolvedValueOnce([{
+                id: '1',
+                email: 'test@test.com'
+            }])
+
+            const result = await refreshAccessToken('valid-refresh-token');
+       
+            expect(typeof result).toBe('string');
+            expect(result.length).toBeGreaterThan(0);
+        })
+
+
+        it('deve retornar UnauthorizedError se token invalido', async () => {
+            vi.mocked(jwt.verify).mockImplementationOnce(() => {
+                throw new Error('invalid token');
+            }) 
+            await expect(refreshAccessToken('invalid-token')).rejects.toThrow(UnauthorizedError)
+        })
+
+        it('deve retornar NotFoundError se user nao existe mais', async () => {
+            mockDb.where.mockResolvedValueOnce([]);
+
+            await expect(refreshAccessToken('valid-refresh-token')).rejects.toThrow(NotFoundError)
+        }) 
+    })
 })
 
 

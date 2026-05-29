@@ -1,8 +1,8 @@
-import { db } from "@/db/index.js";
-import { users } from "@/db/schema.js";
+import { db } from "../db/index.js";
+import { users } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { NotFoundError } from "@/errors/http.errors.js";
+import { NotFoundError } from "../errors/http.errors.js";
 import type { UpdateUserBody } from "@/types/index.js";
 
 export const getUserById = async (id: string) => {
