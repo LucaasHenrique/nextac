@@ -8,12 +8,6 @@ const mockDb = createMockDb();
 
 vi.mock("../../../src/db/index", () => ({get db() {return mockDb}}))
 
-vi.mock('bcrypt', () => ({
-    default: {
-        hash: vi.fn().mockResolvedValue('hashed-password'),
-    }
-}))
-
 const TEST_UUID = '123e4567-e89b-12d3-a456-426614174000'
 
 describe('userService', async () => {
