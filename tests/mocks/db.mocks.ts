@@ -4,10 +4,10 @@ export function createMockDb() {
   const mock = {
     select: vi.fn(),
     from: vi.fn(),
-    where: vi.fn().mockResolvedValue([]),
+    where: vi.fn(),
     insert: vi.fn(),
-    values: vi.fn().mockResolvedValue([]),
-    returning: vi.fn().mockResolvedValue([]),
+    values: vi.fn(),
+    returning: vi.fn(),
     update: vi.fn(),
     set: vi.fn(),
     delete: vi.fn(),
@@ -25,5 +25,6 @@ export function createMockDb() {
   mock.set.mockReturnValue(mock)
 
   mock.delete.mockReturnValue(mock)
+
   return mock
 }
