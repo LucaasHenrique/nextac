@@ -1,12 +1,12 @@
-import { db } from "@/db/index.js";
-import { questions, topics, questionTopics } from "@/db/schema.js";
+import { db } from "../db/index.js";
+import { questions, topics, questionTopics } from "../db/schema.js";
 import { eq, and, isNotNull, lte, sql } from "drizzle-orm";
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "@/errors/http.errors.js";
-import type { CreateQuestionInput, UpdateQuestionBody } from "@/types/index.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../errors/http.errors.js";
+import type { CreateQuestionInput, UpdateQuestionBody } from "../types/index.js";
 import { calculateSM2 } from "../utils/SM2Algorithm.js";
 
 export const createQuestion = async ({ title, description, link, difficulty, userId }: CreateQuestionInput) => {
-    const questionExists = await db.select().from(questions).where(eq(questions.link, link));
+    const questionExists = await db.select().from(questions).where(and(eq(questions.link, link), eq(questions.userId, userId)));
 
     if (questionExists.length > 0) {
         throw new ConflictError("Question already exists!!");
