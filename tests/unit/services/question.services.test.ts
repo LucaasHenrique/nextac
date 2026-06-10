@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockDb } from "../../mocks/db.mocks.js";
 import {
     createQuestion,
+    deleteQuestion,
     getQuestionById,
     getQuestionsByUserId,
     updateQuestion,
@@ -231,6 +232,24 @@ describe("questionService", async () => {
 
         await expect(
             updateQuestion(QUESTION_ID, TEST_USER_UUID, { title: "Updated" }),
+        ).rejects.toThrow(NotFoundError);
+    });
+
+    it("deve deletar uma questao com sucesso", async () => {
+        mockDb.where.mockResolvedValueOnce([{ id: QUESTION_ID }]);
+        mockDb.where.mockReturnValueOnce(mockDb);
+
+        await deleteQuestion(QUESTION_ID, TEST_USER_UUID);
+
+        expect(mockDb.delete).toHaveBeenCalled();
+        expect(mockDb.where).toHaveBeenCalledTimes(2);
+    });
+
+    it("deve lançar NotFoundError ao deletar questao inexistente", async () => {
+        mockDb.where.mockResolvedValueOnce([]);
+
+        await expect(
+            deleteQuestion(QUESTION_ID, TEST_USER_UUID),
         ).rejects.toThrow(NotFoundError);
     });
 });
