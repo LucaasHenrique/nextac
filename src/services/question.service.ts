@@ -1,12 +1,29 @@
 import { db } from "../db/index.js";
 import { questions, topics, questionTopics } from "../db/schema.js";
 import { eq, and, isNotNull, lte, sql } from "drizzle-orm";
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../errors/http.errors.js";
-import type { CreateQuestionInput, UpdateQuestionBody } from "../types/index.js";
+import {
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+} from "../errors/http.errors.js";
+import type {
+    CreateQuestionInput,
+    UpdateQuestionBody,
+} from "../types/index.js";
 import { calculateSM2 } from "../utils/SM2Algorithm.js";
 
-export const createQuestion = async ({ title, description, link, difficulty, userId }: CreateQuestionInput) => {
-    const questionExists = await db.select().from(questions).where(and(eq(questions.link, link), eq(questions.userId, userId)));
+export const createQuestion = async ({
+    title,
+    description,
+    link,
+    difficulty,
+    userId,
+}: CreateQuestionInput) => {
+    const questionExists = await db
+        .select()
+        .from(questions)
+        .where(and(eq(questions.link, link), eq(questions.userId, userId)));
 
     if (questionExists.length > 0) {
         throw new ConflictError("Question already exists!!");
@@ -48,7 +65,11 @@ export const getQuestionById = async (id: string, userId: string) => {
     return question[0];
 };
 
-export const updateQuestion = async (id: string, userId: string, data: UpdateQuestionBody) => {
+export const updateQuestion = async (
+    id: string,
+    userId: string,
+    data: UpdateQuestionBody,
+) => {
     const existing = await db
         .select()
         .from(questions)
@@ -60,12 +81,15 @@ export const updateQuestion = async (id: string, userId: string, data: UpdateQue
 
     const updateData: Record<string, unknown> = {};
     if (data.title !== undefined) updateData.name = data.title;
-    if (data.description !== undefined) updateData.description = data.description;
+    if (data.description !== undefined)
+        updateData.description = data.description;
     if (data.link !== undefined) updateData.link = data.link;
-    if (data.difficulty !== undefined) updateData.difficulty_rating = data.difficulty;
+    if (data.difficulty !== undefined)
+        updateData.difficulty_rating = data.difficulty;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.platform !== undefined) updateData.platform = data.platform;
-    if (data.user_difficulty !== undefined) updateData.user_dificulty = data.user_difficulty;
+    if (data.user_difficulty !== undefined)
+        updateData.user_dificulty = data.user_difficulty;
     if (data.folderId !== undefined) updateData.folderId = data.folderId;
 
     updateData.updatedAt = new Date();
@@ -89,10 +113,16 @@ export const deleteQuestion = async (id: string, userId: string) => {
         throw new NotFoundError("Question not found");
     }
 
-    await db.delete(questions).where(and(eq(questions.id, id), eq(questions.userId, userId)));
+    await db
+        .delete(questions)
+        .where(and(eq(questions.id, id), eq(questions.userId, userId)));
 };
 
-export const associateTopicToQuestion = async (questionId: string, topicId: string, userId: string) => {
+export const associateTopicToQuestion = async (
+    questionId: string,
+    topicId: string,
+    userId: string,
+) => {
     const question = await db
         .select()
         .from(questions)
@@ -114,7 +144,11 @@ export const associateTopicToQuestion = async (questionId: string, topicId: stri
     });
 };
 
-export const deleteQuestionTopic = async (questionId: string, topicId: string, userId: string) => {
+export const deleteQuestionTopic = async (
+    questionId: string,
+    topicId: string,
+    userId: string,
+) => {
     const question = await db
         .select()
         .from(questions)
@@ -130,23 +164,36 @@ export const deleteQuestionTopic = async (questionId: string, topicId: string, u
         throw new NotFoundError("Topic not found");
     }
 
-    await db.delete(questionTopics).where(and(eq(questionTopics.questionId, questionId), eq(questionTopics.topicId, topicId)));
+    await db
+        .delete(questionTopics)
+        .where(
+            and(
+                eq(questionTopics.questionId, questionId),
+                eq(questionTopics.topicId, topicId),
+            ),
+        );
 };
 
 export const getQuestionToReviewToday = async (userId: string) => {
     const questionsToReview = await db
         .select()
         .from(questions)
-        .where(and(
-            eq(questions.userId, userId),
-            isNotNull(questions.next_review),
-            lte(questions.next_review, sql`CURRENT_DATE`)
-        ));
+        .where(
+            and(
+                eq(questions.userId, userId),
+                isNotNull(questions.next_review),
+                lte(questions.next_review, sql`CURRENT_DATE`),
+            ),
+        );
 
     return questionsToReview;
 };
 
-export const addSpacedRepetition = async (grade: number, questionId: string, userId: string) => {
+export const addSpacedRepetition = async (
+    grade: number,
+    questionId: string,
+    userId: string,
+) => {
     if (grade < 0 || grade > 5) {
         throw new BadRequestError("Grade must be between 0 and 5");
     }
@@ -154,26 +201,33 @@ export const addSpacedRepetition = async (grade: number, questionId: string, use
     const question = await db
         .select({
             userId: questions.userId,
-            easeFactor: questions.ease_factor, 
-            interval_days: questions.interval_days, 
-            times_reviewed: questions.times_reviewed
+            easeFactor: questions.ease_factor,
+            interval_days: questions.interval_days,
+            times_reviewed: questions.times_reviewed,
         })
         .from(questions)
         .where(eq(questions.id, questionId));
-    
+
     if (question.length === 0) {
         throw new NotFoundError("Question not found");
     }
 
     if (question[0].userId !== userId) {
-        throw new ForbiddenError("You don't have permission to update this question");
+        throw new ForbiddenError(
+            "You don't have permission to update this question",
+        );
     }
 
     const easeFactor = question[0].easeFactor ?? 2.5;
     const interval_days = question[0].interval_days ?? 0;
     const times_reviewed = question[0].times_reviewed ?? 0;
 
-    const result = calculateSM2(grade, easeFactor, interval_days, times_reviewed);
+    const result = calculateSM2(
+        grade,
+        easeFactor,
+        interval_days,
+        times_reviewed,
+    );
 
     const updated = await db
         .update(questions)
